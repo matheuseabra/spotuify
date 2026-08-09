@@ -752,6 +752,7 @@ struct RefreshSnapshot {
     // poll-only ancillary state.
     playlists: Option<Vec<Playlist>>,
     library: Option<Vec<MediaItem>>,
+    liked_songs: Option<std::result::Result<(Vec<MediaItem>, u32), String>>,
     recent: Option<Vec<MediaItem>>,
     doctor: Option<DoctorReport>,
     cache_status: Option<CacheStatus>,
@@ -769,6 +770,7 @@ struct RefreshSnapshot {
 enum RefreshRead {
     Playlists,
     Library,
+    LikedSongs,
     Recent,
     Doctor,
     CacheStatus,
@@ -785,6 +787,11 @@ impl RefreshRead {
                 // can otherwise be all artists (or all tracks) and hide the
                 // other cards entirely.
                 limit: u32::MAX,
+                provider: None,
+            },
+            Self::LikedSongs => Request::SavedTracks {
+                limit: SAVED_TRACKS_PAGE_SIZE,
+                offset: 0,
                 provider: None,
             },
             Self::Recent => Request::RecentlyPlayed { provider: None },
@@ -2254,6 +2261,20 @@ impl App {
             // shared cache. Group kinds stably so each surface retains
             // the provider's relative ordering after it filters the Vec.
             self.library_items = group_library_items_by_surface(library);
+        }
+        if let Some(liked_songs) = snapshot.liked_songs {
+            self.library_liked_songs_loading = false;
+            match liked_songs {
+                Ok((items, total)) => {
+                    self.library_liked_songs = items;
+                    self.library_liked_songs_total = total;
+                    self.library_liked_songs_error = None;
+                }
+                Err(error) if !self.open_login_modal_if_auth_revoked(&error) => {
+                    self.library_liked_songs_error = Some(error);
+                }
+                Err(_) => {}
+            }
         }
         if let Some(recent) = snapshot.recent {
             self.recent_items = recent.clone();
@@ -3794,9 +3815,14 @@ fn spawn_refresh(
     // here is safe.
     let track_uri = app.playback.item.as_ref().map(|item| item.uri.clone());
     let plan = refresh_plan(app);
+    let fetch_liked_songs_preview = plan.library && !app.library_liked_songs_open;
     if plan.lyrics {
         app.lyrics_loading = true;
         app.lyrics_error = None;
+    }
+    if fetch_liked_songs_preview {
+        app.library_liked_songs_loading = true;
+        app.library_liked_songs_error = None;
     }
     tokio::spawn(async move {
         let snapshot = match time::timeout(
@@ -3804,6 +3830,7 @@ fn spawn_refresh(
             fetch_refresh(
                 track_uri.clone(),
                 plan.library,
+                fetch_liked_songs_preview,
                 plan.diagnostics,
                 plan.lyrics,
             ),
@@ -3814,6 +3841,7 @@ fn spawn_refresh(
             Err(_) => RefreshSnapshot {
                 playlists: None,
                 library: None,
+                liked_songs: None,
                 recent: None,
                 doctor: None,
                 cache_status: None,
@@ -3871,6 +3899,7 @@ fn refresh_plan(app: &App) -> RefreshPlan {
 async fn fetch_refresh(
     track_uri: Option<String>,
     refresh_library: bool,
+    fetch_liked_songs_preview: bool,
     include_diagnostics: bool,
     include_lyrics: bool,
 ) -> RefreshSnapshot {
@@ -3884,6 +3913,9 @@ async fn fetch_refresh(
             RefreshRead::Library,
             RefreshRead::Recent,
         ]);
+    }
+    if fetch_liked_songs_preview {
+        reads.push(RefreshRead::LikedSongs);
     }
     if include_diagnostics {
         reads.extend([
@@ -3907,6 +3939,7 @@ async fn fetch_refresh(
 
     let mut playlists = None;
     let mut library = None;
+    let mut liked_songs = None;
     let mut recent = None;
     let mut doctor = None;
     let mut cache_status = None;
@@ -3924,6 +3957,13 @@ async fn fetch_refresh(
                 Ok(ResponseData::MediaItems { items }) => library = Some(items),
                 Ok(_) => tracing::warn!("unexpected library response"),
                 Err(err) => tracing::warn!(error = %err, "failed to fetch cached library"),
+            },
+            RefreshRead::LikedSongs => match result {
+                Ok(ResponseData::SavedTracksPage { items, total, .. }) => {
+                    liked_songs = Some(Ok((items, total)));
+                }
+                Ok(_) => liked_songs = Some(Err("unexpected saved tracks response".to_string())),
+                Err(err) => liked_songs = Some(Err(short_error(err))),
             },
             RefreshRead::Recent => match result {
                 Ok(ResponseData::MediaItems { items }) => recent = Some(items),
@@ -3963,6 +4003,7 @@ async fn fetch_refresh(
     RefreshSnapshot {
         playlists,
         library,
+        liked_songs,
         recent,
         doctor,
         cache_status,
@@ -4033,6 +4074,7 @@ fn request_force_lyrics(app: &mut App, async_tx: &mpsc::UnboundedSender<AsyncRes
         let _ = async_tx.send(AsyncResult::Refresh(Box::new(RefreshSnapshot {
             playlists: None,
             library: None,
+            liked_songs: None,
             recent: None,
             doctor: None,
             cache_status: None,
@@ -6337,12 +6379,11 @@ fn open_selected(app: &mut App, async_tx: &mpsc::UnboundedSender<AsyncResult>) {
     match app.screen {
         Screen::Library if !app.library_liked_songs_open => {
             app.library_liked_songs_open = true;
-            app.library_liked_songs.clear();
-            app.library_liked_songs_total = 0;
-            app.library_liked_songs_error = None;
             app.selected = 0;
             app.list_filter_query.clear();
-            fetch_saved_tracks_page(app, async_tx);
+            if app.library_liked_songs.is_empty() && !app.library_liked_songs_loading {
+                fetch_saved_tracks_page(app, async_tx);
+            }
         }
         Screen::Playlists => open_playlist(app, async_tx),
         Screen::Podcasts => open_podcast_show(app, async_tx),
@@ -7580,6 +7621,7 @@ mod tests {
         RefreshSnapshot {
             playlists: None,
             library: None,
+            liked_songs: None,
             recent: None,
             doctor: None,
             cache_status: None,
@@ -10417,6 +10459,21 @@ mod tests {
         );
         app.back();
         assert!(!app.library_liked_songs_open);
+    }
+
+    #[test]
+    fn library_refresh_populates_the_liked_songs_preview() {
+        let mut app = test_app();
+        app.screen = Screen::Library;
+        app.library_liked_songs_loading = true;
+        let mut snapshot = empty_refresh_snapshot();
+        snapshot.liked_songs = Some(Ok((vec![item("spotify:track:latest", "Latest")], 1)));
+
+        app.apply_refresh(snapshot);
+
+        assert!(!app.library_liked_songs_loading);
+        assert_eq!(app.library_liked_songs_total, 1);
+        assert_eq!(app.library_liked_songs[0].name, "Latest");
     }
 
     #[test]
