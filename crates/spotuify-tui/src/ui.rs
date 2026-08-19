@@ -887,10 +887,20 @@ fn render_playlist_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
                     ]),
                     Line::from(vec![
                         Span::raw("    "),
-                        Span::styled(
-                            format!("{} tracks · by {}", playlist.tracks_total, playlist.owner),
-                            Style::default().fg(TEXT_MUTED),
-                        ),
+                        if app.playlist_tracks_inaccessible(&playlist.id) {
+                            Span::styled(
+                                format!(
+                                    "{} tracks unavailable · by {}",
+                                    playlist.tracks_total, playlist.owner
+                                ),
+                                Style::default().fg(WARN),
+                            )
+                        } else {
+                            Span::styled(
+                                format!("{} tracks · by {}", playlist.tracks_total, playlist.owner),
+                                Style::default().fg(TEXT_MUTED),
+                            )
+                        },
                     ]),
                 ])
             })
@@ -3447,6 +3457,12 @@ fn render_playlists(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
         if items.is_empty() {
             let message = if app.is_liked_songs_open() {
                 "No liked songs yet."
+            } else if app
+                .selected_playlist_id
+                .as_deref()
+                .is_some_and(|id| app.playlist_tracks_inaccessible(id))
+            {
+                "Tracks unavailable — this playlist's tracks are restricted by the provider for third-party apps. You can still play it on a Spotify device."
             } else {
                 "Loading tracks…"
             };
@@ -4118,6 +4134,14 @@ fn render_playlist_list(
         } else {
             Span::styled(" ▢ ", Style::default().fg(TEXT_MUTED))
         };
+        let tracks_label = if app.playlist_tracks_inaccessible(&playlist.id) {
+            Span::styled("tracks unavailable", Style::default().fg(WARN))
+        } else {
+            Span::styled(
+                format!("{} tracks", playlist.tracks_total),
+                Style::default().fg(TEXT_MUTED),
+            )
+        };
         let row = ratatui::widgets::Row::new(vec![
             ratatui::widgets::Cell::from(Line::from(marker)),
             ratatui::widgets::Cell::from(Line::from(Span::styled(
@@ -4128,10 +4152,7 @@ fn render_playlist_list(
                 playlist.owner.clone(),
                 Style::default().fg(TEXT_MUTED),
             ))),
-            ratatui::widgets::Cell::from(Line::from(Span::styled(
-                format!("{} tracks", playlist.tracks_total),
-                Style::default().fg(TEXT_MUTED),
-            ))),
+            ratatui::widgets::Cell::from(Line::from(tracks_label)),
         ]);
         [row, ratatui::widgets::Row::new(Vec::<&str>::new())]
     }));
@@ -5827,6 +5848,28 @@ mod tests {
         assert!(rendered.contains("Liked Songs"));
         assert!(rendered.contains("Coding"));
         assert!(rendered.contains("generated fallback"));
+    }
+
+    #[test]
+    fn inaccessible_playlist_detail_shows_unavailable_message_not_loading() {
+        let mut app = test_app();
+        app.screen = Screen::Playlists;
+        app.selected_playlist_id = Some("fake:playlist:locked".to_string());
+        app.selected_playlist_name = Some("Locked".to_string());
+        app.playlist_tracks = Vec::new();
+        app.inaccessible_playlist_ids
+            .insert("fake:playlist:locked".to_string());
+
+        let rendered = render_lines(&mut app, 100, 32).join("\n");
+
+        assert!(
+            rendered.contains("Tracks unavailable"),
+            "inaccessible playlist must not render the eternal 'Loading tracks…'; got:\n{rendered}"
+        );
+        assert!(
+            !rendered.contains("Loading tracks"),
+            "inaccessible playlist must not render 'Loading tracks…'; got:\n{rendered}"
+        );
     }
 
     #[test]

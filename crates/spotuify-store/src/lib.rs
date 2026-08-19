@@ -946,13 +946,19 @@ impl Store {
         if limit == 0 {
             return Ok(Vec::new());
         }
+        // NOTE: deliberately does not filter on `tracks_accessible`. That flag
+        // gates the sync layer's track-refetch (playlists whose items 403'd are
+        // skipped until their version token changes), but the playlists
+        // themselves must stay visible — followed/third-party playlists are
+        // exactly the ones whose tracks Spotify may refuse to serve to the
+        // app, and hiding them from the list hides the user's own library.
+        // Clients decide how to surface an inaccessible playlist.
         let rows = sqlx::query(
             "SELECT playlists.id, playlists.name, playlists.owner, playlists.tracks_total,
                     playlists.image_url, playlists.snapshot_id
              FROM playlists
              JOIN media_items ON media_items.uri = playlists.uri
-             WHERE playlists.tracks_accessible = 1
-               AND (? IS NULL OR media_items.provider = ?)
+             WHERE (? IS NULL OR media_items.provider = ?)
              ORDER BY playlists.name COLLATE NOCASE ASC
              LIMIT ?",
         )
@@ -6606,7 +6612,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn metadata_never_reenables_inaccessible_playlist_tracks() {
+    async fn inaccessible_playlist_tracks_stay_listed_but_never_reenabled_by_metadata() {
         let store = Store::in_memory()
             .await
             .expect("in-memory store should open");
@@ -6643,21 +6649,29 @@ mod tests {
             .playlist_tracks_accessible(&playlist.id)
             .await
             .expect("access flag should read"));
-        assert!(store
-            .list_playlists(10)
-            .await
-            .expect("playlists should read")
-            .is_empty());
+        // The read path must still surface the playlist: the access flag only
+        // gates the sync refetch, it must not hide the playlist from the list.
+        assert_eq!(
+            store
+                .list_playlists(10)
+                .await
+                .expect("playlists should read")
+                .len(),
+            1
+        );
 
         store
             .persist_playlists(std::slice::from_ref(&playlist))
             .await
             .expect("same snapshot should persist");
-        assert!(store
-            .list_playlists(10)
-            .await
-            .expect("playlists should read")
-            .is_empty());
+        assert_eq!(
+            store
+                .list_playlists(10)
+                .await
+                .expect("playlists should read")
+                .len(),
+            1
+        );
 
         let changed = Playlist {
             version_token: Some("snapshot-b".to_string()),
@@ -6667,11 +6681,15 @@ mod tests {
             .persist_playlists(std::slice::from_ref(&changed))
             .await
             .expect("changed snapshot should persist");
-        assert!(store
-            .list_playlists(10)
-            .await
-            .expect("metadata cannot re-enable tracks")
-            .is_empty());
+        // Metadata alone cannot re-enable tracks, but the playlist stays listed.
+        assert_eq!(
+            store
+                .list_playlists(10)
+                .await
+                .expect("metadata change should not hide playlist")
+                .len(),
+            1
+        );
 
         store
             .persist_provider_playlist_items_with_version_bulk(
@@ -6695,11 +6713,16 @@ mod tests {
             .persist_playlists(std::slice::from_ref(&changed))
             .await
             .expect("same forbidden version should persist metadata");
-        assert!(store
-            .list_playlists(10)
-            .await
-            .expect("same forbidden version stays hidden")
-            .is_empty());
+        // Re-marking forbidden stays listed: the list must never hide a
+        // playlist the user follows, even when its tracks are unavailable.
+        assert_eq!(
+            store
+                .list_playlists(10)
+                .await
+                .expect("forbidden version stays listed")
+                .len(),
+            1
+        );
     }
 
     #[tokio::test]

@@ -2017,7 +2017,6 @@ impl App {
     pub(crate) fn filtered_playlists(&self) -> Vec<Playlist> {
         self.playlists
             .iter()
-            .filter(|playlist| !self.inaccessible_playlist_ids.contains(&playlist.id))
             .filter(|playlist| {
                 matches_filter(
                     &self.list_filter_query,
@@ -2026,6 +2025,14 @@ impl App {
             })
             .cloned()
             .collect()
+    }
+
+    /// Whether the given playlist's tracks are currently inaccessible (the
+    /// provider refused to serve its items, e.g. a 403 on a third-party
+    /// playlist). The playlist stays visible in the list; this flag only
+    /// changes how its row is rendered.
+    pub(crate) fn playlist_tracks_inaccessible(&self, playlist_id: &str) -> bool {
+        self.inaccessible_playlist_ids.contains(playlist_id)
     }
 
     pub(crate) fn filtered_devices(&self) -> Vec<Device> {
@@ -11683,7 +11690,7 @@ mod tests {
     }
 
     #[test]
-    fn forbidden_playlist_tracks_hide_only_that_playlist_after_failure() {
+    fn forbidden_playlist_tracks_keep_playlist_visible_with_unavailable_state() {
         let mut app = test_app();
         app.playlists = vec![
             Playlist {
@@ -11711,9 +11718,12 @@ mod tests {
             result: Err("Spotify API 403 on GET /playlists/p1/items: Forbidden".to_string()),
         });
 
+        // The forbidden playlist stays in the list: only its tracks are
+        // unavailable, and the user still follows it.
         let visible = app.filtered_playlists();
-        assert_eq!(visible.len(), 1);
-        assert_eq!(visible[0].id, "followed");
+        assert_eq!(visible.len(), 2);
+        assert!(app.playlist_tracks_inaccessible("p1"));
+        assert!(!app.playlist_tracks_inaccessible("followed"));
         assert!(app.error.is_none());
         assert_eq!(
             app.toast.as_deref(),
