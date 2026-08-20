@@ -3312,7 +3312,7 @@ fn render_library(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                     message.to_string(),
                     Style::default().fg(TEXT_MUTED),
                 )))
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
                 inner,
             );
             return;
@@ -3404,7 +3404,7 @@ fn render_library_grid(frame: &mut Frame<'_>, app: &App, items: &[MediaItem], ar
                 message.to_string(),
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             liked_inner,
         );
     } else {
