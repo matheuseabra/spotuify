@@ -17,8 +17,8 @@ use spotuify_core::{active_lyric_line_index, MediaItem, MediaKind, Playlist, Rep
 
 use crate::widgets::style::{
     accent, accent_foreground, progress_filled, BG, BORDER, BORDER_STRONG, CHIP_BG, CHIP_FG,
-    DANGER, KIND_ALBUM, KIND_ARTIST, KIND_PODCAST, PROGRESS_UNFILLED, SUCCESS, SURFACE, TEXT,
-    TEXT_MUTED, WARN,
+    DANGER, KIND_ALBUM, KIND_ARTIST, KIND_PODCAST, PROGRESS_UNFILLED, SUCCESS, TEXT, TEXT_MUTED,
+    TRANSPARENT, WARN,
 };
 use crate::widgets::terminal::{
     banner_glyph, device_kind_glyph, speaker_glyph, speaker_glyph_width, spinner_frame, volume_bar,
@@ -67,7 +67,13 @@ pub fn render(frame: &mut Frame<'_>, app: &mut App) {
     // exactly what they draw.
     app.hit_map.borrow_mut().clear();
     let area = frame.area();
-    frame.render_widget(Block::default().style(Style::default().bg(BG)), area);
+    // Root backdrop: transparent so the terminal's own background (and
+    // whatever the user has behind the window) shows through. Individual
+    // chips / art keep their opaque fills.
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Reset)),
+        area,
+    );
 
     let root = root_chrome_layout(area);
 
@@ -183,7 +189,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 ),
                 Span::styled("Loading albums…", Style::default().fg(TEXT)),
             ]))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             albums_inner,
         );
     } else if view.visible_albums().is_empty() {
@@ -194,7 +200,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
         };
         frame.render_widget(
             Paragraph::new(Span::styled(message, Style::default().fg(TEXT_MUTED)))
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
             albums_inner,
         );
     } else {
@@ -253,7 +259,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("▌")
-            .style(Style::default().bg(SURFACE));
+            .style(Style::default().bg(TRANSPARENT));
         let mut state = ListState::default();
         state.select(Some(selected_row));
         frame.render_stateful_widget(list, albums_inner, &mut state);
@@ -287,7 +293,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 ),
                 Span::styled("Loading tracks…", Style::default().fg(TEXT)),
             ]))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             tracks_inner,
         );
     } else if view.album_tracks.is_empty() {
@@ -296,7 +302,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 "No tracks for this album.",
                 Style::default().fg(TEXT_MUTED),
             ))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             tracks_inner,
         );
     } else {
@@ -331,7 +337,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("▌")
-            .style(Style::default().bg(SURFACE));
+            .style(Style::default().bg(TRANSPARENT));
         let mut state = ListState::default();
         state.select(if view.album_tracks.is_empty() {
             None
@@ -353,7 +359,7 @@ fn render_artist_view(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 err.clone(),
                 Style::default().fg(DANGER).add_modifier(Modifier::BOLD),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             err_area,
         );
     }
@@ -540,7 +546,7 @@ fn render_login_modal(frame: &mut Frame<'_>, area: Rect, app: &App) {
         Paragraph::new(lines)
             .block(block)
             .wrap(Wrap { trim: false })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         area,
     );
 }
@@ -611,7 +617,7 @@ fn render_notifications(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 "  No reminders have fired yet.",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inbox_inner,
         );
     } else {
@@ -651,7 +657,7 @@ fn render_notifications(frame: &mut Frame<'_>, app: &App, area: Rect) {
             List::new(items)
                 .highlight_style(highlight)
                 .highlight_symbol("▌")
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
             inbox_inner,
             &mut state,
         );
@@ -669,7 +675,7 @@ fn render_notifications(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 "  Nothing scheduled. Press R on a track/album/playlist to add one.",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             sched_inner,
         );
     } else {
@@ -707,7 +713,7 @@ fn render_notifications(frame: &mut Frame<'_>, app: &App, area: Rect) {
             List::new(items)
                 .highlight_style(highlight)
                 .highlight_symbol("▌")
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
             sched_inner,
             &mut state,
         );
@@ -772,7 +778,7 @@ fn render_reminder_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
             ),
             Span::styled("   (Tab to cycle)", Style::default().fg(TEXT_MUTED)),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         body[1],
     );
 
@@ -785,7 +791,7 @@ fn render_reminder_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
             Span::raw("  "),
             Span::styled("Esc cancel", Style::default().fg(TEXT_MUTED)),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         body[2],
     );
 }
@@ -824,7 +830,7 @@ fn render_confirm_modal(frame: &mut Frame<'_>, area: Rect, app: &App) {
         Paragraph::new(lines)
             .block(block)
             .wrap(Wrap { trim: false })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         area,
     );
 }
@@ -888,10 +894,20 @@ fn render_playlist_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
                     ]),
                     Line::from(vec![
                         Span::raw("    "),
-                        Span::styled(
-                            format!("{} tracks · by {}", playlist.tracks_total, playlist.owner),
-                            Style::default().fg(TEXT_MUTED),
-                        ),
+                        if app.playlist_tracks_inaccessible(&playlist.id) {
+                            Span::styled(
+                                format!(
+                                    "{} tracks unavailable · by {}",
+                                    playlist.tracks_total, playlist.owner
+                                ),
+                                Style::default().fg(WARN),
+                            )
+                        } else {
+                            Span::styled(
+                                format!("{} tracks · by {}", playlist.tracks_total, playlist.owner),
+                                Style::default().fg(TEXT_MUTED),
+                            )
+                        },
                     ]),
                 ])
             })
@@ -922,7 +938,7 @@ fn render_playlist_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
             Span::raw("  "),
             Span::styled("Esc cancel", Style::default().fg(TEXT_MUTED)),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         body_rows[1],
     );
 }
@@ -967,7 +983,7 @@ fn render_audio_output_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("▌")
-        .style(Style::default().bg(SURFACE));
+        .style(Style::default().bg(TRANSPARENT));
     let mut state = ListState::default();
     state.select(Some(
         picker.selected.min(picker.outputs.len().saturating_sub(1)),
@@ -979,7 +995,7 @@ fn render_audio_output_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
             "↑/↓ select · Enter apply (restarts player) · Esc cancel",
             Style::default().fg(TEXT_MUTED),
         )))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         body_rows[1],
     );
 }
@@ -1024,7 +1040,7 @@ fn render_device_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 Style::default().fg(TEXT_MUTED),
             )))
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             body_rows[0],
         );
         frame.render_widget(
@@ -1032,7 +1048,7 @@ fn render_device_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 " Esc close",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             body_rows[1],
         );
         return;
@@ -1131,7 +1147,7 @@ fn render_device_picker(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 Style::default().fg(TEXT_MUTED),
             )),
         ])
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         body_rows[1],
     );
 }
@@ -1187,7 +1203,7 @@ fn render_queue_fullscreen(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 )),
             ])
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             hero_cols[1],
         );
 
@@ -1200,7 +1216,7 @@ fn render_queue_fullscreen(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
             )))
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -1265,7 +1281,7 @@ fn render_queue_fullscreen(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 Span::styled(item.subtitle.clone(), Style::default().fg(TEXT)),
                 Span::styled(context_suffix(item), Style::default().fg(TEXT_MUTED)),
             ]))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             right_rows[2],
         );
         let progress = progress_ratio(view.progress_ms, view.duration_ms);
@@ -1278,7 +1294,7 @@ fn render_queue_fullscreen(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                     fmt_ms(view.progress_ms),
                     fmt_ms(view.duration_ms)
                 ))
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
             right_rows[4],
         );
         render_current_cover_or_gradient(
@@ -1302,7 +1318,7 @@ fn render_queue_fullscreen(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 )),
             ])
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             hero_cols[1],
         );
     }
@@ -1329,7 +1345,7 @@ fn render_queue_fullscreen(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 )),
             ])
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -1356,7 +1372,7 @@ fn render_now_playing(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
         )]))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(app.palette.now_playing_rail))
-        .style(Style::default().bg(app.palette.background));
+        .style(Style::default().bg(Color::Reset));
     let inner = block.inner(area);
     frame.render_widget(block, area);
 
@@ -1538,7 +1554,7 @@ fn render_track(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 )),
             ])
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE))
+            .style(Style::default().bg(Color::Reset))
         } else {
             // Daemon hasn't told us what's currently playing yet. Show
             // a transient loading state so the user knows we're working,
@@ -1554,7 +1570,7 @@ fn render_track(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 )),
             ])
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE))
+            .style(Style::default().bg(Color::Reset))
         };
         frame.render_widget(empty, area);
         return;
@@ -1596,7 +1612,7 @@ fn render_track(frame: &mut Frame<'_>, app: &App, area: Rect) {
             truncate(&item.name, title_width),
             Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
         )]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(Color::Reset)),
         rows[1],
     );
 
@@ -1613,7 +1629,7 @@ fn render_track(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 Style::default().fg(TEXT_MUTED),
             ),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(Color::Reset)),
         rows[2],
     );
 
@@ -1633,7 +1649,7 @@ fn render_track(frame: &mut Frame<'_>, app: &App, area: Rect) {
             Span::styled(" on ", Style::default().fg(TEXT_MUTED)),
             Span::styled(truncate(&device_name(app), 20), Style::default().fg(TEXT)),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(Color::Reset)),
         label_rect,
     );
     frame.render_widget(
@@ -1655,7 +1671,7 @@ fn render_track(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 fmt_ms(progress_ms),
                 fmt_ms(view.duration_ms)
             ))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(Color::Reset)),
         gauge_rect,
     );
 }
@@ -1792,7 +1808,7 @@ fn render_transport(frame: &mut Frame<'_>, app: &App, area: Rect, compact: bool)
     let chip_gap = if compact { "  " } else { "   " };
     let big_chip = |glyph: &str, role: ButtonHeroRole, enabled: bool| {
         let (fg, bg) = if !enabled {
-            (BORDER_STRONG, SURFACE)
+            (BORDER_STRONG, CHIP_BG)
         } else {
             match role {
                 ButtonHeroRole::Primary => (accent_foreground(), accent()),
@@ -1834,7 +1850,7 @@ fn render_transport(frame: &mut Frame<'_>, app: &App, area: Rect, compact: bool)
         if !enabled {
             Span::styled(
                 format!(" {label} "),
-                Style::default().fg(BORDER_STRONG).bg(SURFACE),
+                Style::default().fg(BORDER_STRONG).bg(CHIP_BG),
             )
         } else if active {
             state_chip(label, StateRole::Active)
@@ -1935,15 +1951,15 @@ fn render_transport(frame: &mut Frame<'_>, app: &App, area: Rect, compact: bool)
         ])
         .split(inner);
     frame.render_widget(
-        Paragraph::new(primary_row).style(Style::default().bg(SURFACE)),
+        Paragraph::new(primary_row).style(Style::default().bg(Color::Reset)),
         rows[1],
     );
     frame.render_widget(
-        Paragraph::new(toggles_row).style(Style::default().bg(SURFACE)),
+        Paragraph::new(toggles_row).style(Style::default().bg(Color::Reset)),
         rows[3],
     );
     frame.render_widget(
-        Paragraph::new(volume_row).style(Style::default().bg(SURFACE)),
+        Paragraph::new(volume_row).style(Style::default().bg(Color::Reset)),
         rows[5],
     );
     // Phase 7 — when the visualizer is enabled but has no active PCM
@@ -1959,7 +1975,7 @@ fn render_transport(frame: &mut Frame<'_>, app: &App, area: Rect, compact: bool)
                     .fg(TEXT_MUTED)
                     .add_modifier(Modifier::ITALIC),
             )]))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             rows[4],
         );
     }
@@ -2032,7 +2048,7 @@ fn render_body(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
     let outer = Block::default()
         .borders(Borders::LEFT | Borders::RIGHT)
         .border_style(Style::default().fg(BORDER))
-        .style(Style::default().bg(BG));
+        .style(Style::default().bg(Color::Reset));
     let inner = outer.inner(area).inner(Margin {
         horizontal: 1,
         vertical: 0,
@@ -2070,7 +2086,7 @@ fn render_body(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
         .collect::<Vec<_>>();
     let (tab_line, _) = tab_strip_layout_with_unavailable(selected, tabs_row.width, &unavailable);
     frame.render_widget(
-        Paragraph::new(tab_line).style(Style::default().bg(BG)),
+        Paragraph::new(tab_line).style(Style::default().bg(Color::Reset)),
         tabs_row,
     );
 
@@ -2165,7 +2181,7 @@ fn tab_strip_layout_with_unavailable(
     let mut spans: Vec<Span<'static>> = Vec::new();
     let mut ranges: Vec<(usize, std::ops::Range<u16>)> = Vec::new();
     let mut x: u16 = 0;
-    let marker_style = Style::default().fg(TEXT_MUTED).bg(BG);
+    let marker_style = Style::default().fg(TEXT_MUTED).bg(Color::Reset);
     if left_marker {
         spans.push(Span::styled("‹ ", marker_style));
         x += 2;
@@ -2174,18 +2190,18 @@ fn tab_strip_layout_with_unavailable(
         if index > start {
             spans.push(Span::styled(
                 divider.to_string(),
-                Style::default().fg(BORDER_STRONG).bg(BG),
+                Style::default().fg(BORDER_STRONG).bg(Color::Reset),
             ));
             x += divider.chars().count() as u16;
         }
         let is_active = index == selected;
         let is_unavailable = unavailable.contains(&index);
         let key_chip_style = if is_unavailable {
-            Style::default().fg(BORDER_STRONG).bg(BG)
+            Style::default().fg(BORDER_STRONG).bg(Color::Reset)
         } else if is_active {
             Style::default()
                 .fg(accent())
-                .bg(BG)
+                .bg(Color::Reset)
                 .add_modifier(Modifier::BOLD)
         } else {
             Style::default()
@@ -2253,7 +2269,7 @@ fn render_history(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 "  Loading history…",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -2264,7 +2280,7 @@ fn render_history(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 format!("  {err}"),
                 Style::default().fg(DANGER),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -2275,7 +2291,7 @@ fn render_history(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 "  No listening history yet. Tracks you play show up here.",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -2379,7 +2395,7 @@ fn render_queue_rail(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 Style::default().fg(TEXT_MUTED),
             )))
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -2492,7 +2508,7 @@ fn render_queue_rail(frame: &mut Frame<'_>, app: &App, area: Rect) {
     frame.render_widget(
         Paragraph::new(lines)
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         inner,
     );
 }
@@ -2566,7 +2582,7 @@ fn render_hints_rail(frame: &mut Frame<'_>, app: &App, area: Rect) {
     frame.render_widget(
         Paragraph::new(lines)
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         inner,
     );
 }
@@ -2602,7 +2618,7 @@ fn render_home_queue_panel(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 Style::default().fg(TEXT_MUTED),
             )))
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -2623,7 +2639,7 @@ fn render_home_queue_panel(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 "No active playback session. Start playback from Search or Library.",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -2741,7 +2757,7 @@ fn render_lyrics(frame: &mut Frame<'_>, app: &App, area: Rect) {
                     Style::default().fg(TEXT_MUTED),
                 )),
             ])
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             header_columns[2],
         );
     } else {
@@ -2750,7 +2766,7 @@ fn render_lyrics(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 "No active track.",
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             rows[1],
         );
     }
@@ -2795,7 +2811,7 @@ fn render_lyrics(frame: &mut Frame<'_>, app: &App, area: Rect) {
         frame.render_widget(
             Paragraph::new(lines)
                 .wrap(Wrap { trim: true })
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
             rows[2],
         );
         return;
@@ -2858,7 +2874,7 @@ fn render_lyrics(frame: &mut Frame<'_>, app: &App, area: Rect) {
         Paragraph::new(body)
             .wrap(Wrap { trim: false })
             .scroll((scroll_rows, 0))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         rows[2],
     );
 
@@ -2882,7 +2898,7 @@ fn render_lyrics(frame: &mut Frame<'_>, app: &App, area: Rect) {
         vec![Span::styled("No provider", Style::default().fg(TEXT_MUTED))]
     };
     frame.render_widget(
-        Paragraph::new(Line::from(footer)).style(Style::default().bg(SURFACE)),
+        Paragraph::new(Line::from(footer)).style(Style::default().bg(TRANSPARENT)),
         rows[3],
     );
 }
@@ -2909,9 +2925,9 @@ fn render_search(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
         format!("/ search  ·  S sort: {sort_label}  ·  T type: {filter_label}")
     };
     let input_style = if app.search_input_active {
-        Style::default().fg(TEXT).bg(SURFACE)
+        Style::default().fg(TEXT).bg(TRANSPARENT)
     } else {
-        Style::default().fg(TEXT_MUTED).bg(SURFACE)
+        Style::default().fg(TEXT_MUTED).bg(TRANSPARENT)
     };
     frame.render_widget(
         Paragraph::new(Line::from(vec![
@@ -2940,7 +2956,7 @@ fn render_search(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 ((inner.height as usize) / 2).min(5),
                 inner.width,
             ))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
     } else if items.is_empty() {
@@ -3172,7 +3188,7 @@ fn render_media_rows(
             None => Span::styled("no results", Style::default().fg(TEXT_MUTED)),
         };
         frame.render_widget(
-            Paragraph::new(placeholder).style(Style::default().bg(SURFACE)),
+            Paragraph::new(placeholder).style(Style::default().bg(TRANSPARENT)),
             area,
         );
         return;
@@ -3247,7 +3263,7 @@ fn render_media_rows(
         ]));
     }
     frame.render_widget(
-        Paragraph::new(lines).style(Style::default().bg(SURFACE)),
+        Paragraph::new(lines).style(Style::default().bg(TRANSPARENT)),
         rows_area,
     );
     register_row_hits(
@@ -3260,7 +3276,7 @@ fn render_media_rows(
     );
     if let (Some(footer_rect), Some(footer_span)) = (footer_area, footer) {
         frame.render_widget(
-            Paragraph::new(footer_span).style(Style::default().bg(SURFACE)),
+            Paragraph::new(footer_span).style(Style::default().bg(TRANSPARENT)),
             footer_rect,
         );
     }
@@ -3339,7 +3355,7 @@ fn render_library(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 )),
             ])
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -3493,7 +3509,7 @@ fn render_podcasts(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                     message.to_string(),
                     Style::default().fg(TEXT_MUTED),
                 )))
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
                 inner,
             );
             return;
@@ -3511,7 +3527,7 @@ fn render_podcasts(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("▌")
-        .style(Style::default().bg(SURFACE));
+        .style(Style::default().bg(TRANSPARENT));
         let mut state = ListState::default();
         state.select((app.selected < items.len()).then_some(app.selected));
         frame.render_stateful_widget(list, inner, &mut state);
@@ -3572,7 +3588,7 @@ fn render_library_section(
                 },
                 Style::default().fg(TEXT_MUTED),
             )))
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
             inner,
         );
         return;
@@ -3590,7 +3606,7 @@ fn render_library_section(
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("▌")
-        .style(Style::default().bg(SURFACE));
+        .style(Style::default().bg(TRANSPARENT));
     let mut state = ListState::default();
     state.select(local_selected);
     frame.render_stateful_widget(list, inner, &mut state);
@@ -3620,6 +3636,12 @@ fn render_playlists(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
         if items.is_empty() {
             let message = if app.is_liked_songs_open() {
                 "No liked songs yet."
+            } else if app
+                .selected_playlist_id
+                .as_deref()
+                .is_some_and(|id| app.playlist_tracks_inaccessible(id))
+            {
+                "Tracks unavailable — this playlist's tracks are restricted by the provider for third-party apps. You can still play it on a Spotify device."
             } else {
                 "Loading tracks…"
             };
@@ -3628,7 +3650,7 @@ fn render_playlists(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                     message,
                     Style::default().fg(TEXT_MUTED),
                 )))
-                .style(Style::default().bg(SURFACE)),
+                .style(Style::default().bg(TRANSPARENT)),
                 inner,
             );
             return;
@@ -3660,7 +3682,7 @@ fn render_playlists(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol("▌")
-        .style(Style::default().bg(SURFACE));
+        .style(Style::default().bg(TRANSPARENT));
         let mut state = ListState::default();
         state.select(if app.selected >= items.len() {
             None
@@ -3682,9 +3704,9 @@ fn render_playlists(frame: &mut Frame<'_>, app: &mut App, area: Rect) {
 
 fn render_filter_bar(frame: &mut Frame<'_>, app: &App, title: &str, area: Rect) {
     let style = if app.list_filter_active {
-        Style::default().fg(TEXT).bg(SURFACE)
+        Style::default().fg(TEXT).bg(TRANSPARENT)
     } else {
-        Style::default().fg(TEXT_MUTED).bg(SURFACE)
+        Style::default().fg(TEXT_MUTED).bg(TRANSPARENT)
     };
     let prompt = if app.list_filter_active {
         "type to filter current list"
@@ -3794,7 +3816,7 @@ fn render_diagnostics(frame: &mut Frame<'_>, app: &App, area: Rect) {
     frame.render_widget(
         Paragraph::new(left)
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         left_inner,
     );
 
@@ -3920,7 +3942,7 @@ fn render_diagnostics(frame: &mut Frame<'_>, app: &App, area: Rect) {
     frame.render_widget(
         Paragraph::new(right)
             .wrap(Wrap { trim: false })
-            .style(Style::default().fg(TEXT).bg(SURFACE)),
+            .style(Style::default().fg(TEXT).bg(TRANSPARENT)),
         right_inner,
     );
 }
@@ -4006,7 +4028,7 @@ fn render_command_palette(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 Style::default().fg(accent()).add_modifier(Modifier::BOLD),
             ),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[0],
     );
 
@@ -4042,7 +4064,7 @@ fn render_command_palette(frame: &mut Frame<'_>, area: Rect, app: &App) {
                     .add_modifier(Modifier::BOLD),
             )
             .highlight_symbol("▌")
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         rows[1],
         &mut state,
     );
@@ -4057,7 +4079,7 @@ fn render_command_palette(frame: &mut Frame<'_>, area: Rect, app: &App) {
             Span::raw("  "),
             Span::styled("Esc close", Style::default().fg(TEXT_MUTED)),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[2],
     );
 }
@@ -4164,7 +4186,7 @@ fn render_error_modal(frame: &mut Frame<'_>, area: Rect, app: &App) {
             Style::default().fg(TEXT).add_modifier(Modifier::BOLD),
         )))
         .wrap(Wrap { trim: true })
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[1],
     );
 
@@ -4174,7 +4196,7 @@ fn render_error_modal(frame: &mut Frame<'_>, area: Rect, app: &App) {
             Style::default().fg(TEXT_MUTED),
         )))
         .wrap(Wrap { trim: true })
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[2],
     );
 
@@ -4184,7 +4206,7 @@ fn render_error_modal(frame: &mut Frame<'_>, area: Rect, app: &App) {
             Span::raw("   "),
             Span::styled("? help", Style::default().fg(TEXT_MUTED)),
         ]))
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[3],
     );
 }
@@ -4204,7 +4226,7 @@ fn render_media_list(
             Paragraph::new(message)
                 .block(panel_block(&title))
                 .wrap(Wrap { trim: true })
-                .style(Style::default().fg(TEXT_MUTED).bg(SURFACE)),
+                .style(Style::default().fg(TEXT_MUTED).bg(TRANSPARENT)),
             area,
         );
         return;
@@ -4232,7 +4254,7 @@ fn render_media_list(
                 .add_modifier(Modifier::BOLD),
         )
         .highlight_symbol(" ")
-        .style(Style::default().bg(SURFACE));
+        .style(Style::default().bg(TRANSPARENT));
     let mut state = ListState::default();
     state.select(if items.is_empty() || selected >= items.len() {
         None
@@ -4291,6 +4313,14 @@ fn render_playlist_list(
         } else {
             Span::styled(" ▢ ", Style::default().fg(TEXT_MUTED))
         };
+        let tracks_label = if app.playlist_tracks_inaccessible(&playlist.id) {
+            Span::styled("tracks unavailable", Style::default().fg(WARN))
+        } else {
+            Span::styled(
+                format!("{} tracks", playlist.tracks_total),
+                Style::default().fg(TEXT_MUTED),
+            )
+        };
         let row = ratatui::widgets::Row::new(vec![
             ratatui::widgets::Cell::from(Line::from(marker)),
             ratatui::widgets::Cell::from(Line::from(Span::styled(
@@ -4301,10 +4331,7 @@ fn render_playlist_list(
                 playlist.owner.clone(),
                 Style::default().fg(TEXT_MUTED),
             ))),
-            ratatui::widgets::Cell::from(Line::from(Span::styled(
-                format!("{} tracks", playlist.tracks_total),
-                Style::default().fg(TEXT_MUTED),
-            ))),
+            ratatui::widgets::Cell::from(Line::from(tracks_label)),
         ]);
         [row, ratatui::widgets::Row::new(Vec::<&str>::new())]
     }));
@@ -4327,7 +4354,7 @@ fn render_playlist_list(
             .bg(accent())
             .add_modifier(Modifier::BOLD),
     )
-    .style(Style::default().bg(SURFACE));
+    .style(Style::default().bg(TRANSPARENT));
     let mut state = ratatui::widgets::TableState::default();
     // Each playlist occupies two table rows (content + spacer). The
     // selection state must point at the content row so the highlight
@@ -4439,7 +4466,7 @@ fn render_artwork_preview(
             Line::from(Span::styled(status, Style::default().fg(accent()))),
         ])
         .wrap(Wrap { trim: true })
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[1],
     );
 }
@@ -4527,7 +4554,10 @@ fn render_status(frame: &mut Frame<'_>, app: &App, area: Rect) {
         .borders(Borders::TOP)
         .border_style(Style::default().fg(BORDER_STRONG));
     let inner = block.inner(area);
-    frame.render_widget(Block::default().style(Style::default().bg(BG)), area);
+    frame.render_widget(
+        Block::default().style(Style::default().bg(Color::Reset)),
+        area,
+    );
     frame.render_widget(block, area);
 
     let rows = Layout::default()
@@ -4588,7 +4618,7 @@ fn render_ephemeral_status(frame: &mut Frame<'_>, app: &App, area: Rect) {
             spans.push(Span::styled(" restart", Style::default().fg(TEXT_MUTED)));
         }
         frame.render_widget(
-            Paragraph::new(Line::from(spans)).style(Style::default().bg(BG)),
+            Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Reset)),
             area,
         );
         return;
@@ -4603,12 +4633,12 @@ fn render_ephemeral_status(frame: &mut Frame<'_>, app: &App, area: Rect) {
                     format!(" {spinner} "),
                     Style::default()
                         .fg(WARN)
-                        .bg(BG)
+                        .bg(Color::Reset)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(format!("{len} pending: {first}"), Style::default().fg(WARN)),
             ]))
-            .style(Style::default().bg(BG)),
+            .style(Style::default().bg(Color::Reset)),
             area,
         );
         return;
@@ -4631,7 +4661,7 @@ fn render_ephemeral_status(frame: &mut Frame<'_>, app: &App, area: Rect) {
                 Span::raw(" "),
                 Span::styled(toast.message.clone(), Style::default().fg(color)),
             ]))
-            .style(Style::default().bg(BG)),
+            .style(Style::default().bg(Color::Reset)),
             area,
         );
         return;
@@ -4644,7 +4674,7 @@ fn render_ephemeral_status(frame: &mut Frame<'_>, app: &App, area: Rect) {
                     format!(" {spinner} "),
                     Style::default()
                         .fg(accent())
-                        .bg(BG)
+                        .bg(Color::Reset)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
@@ -4652,14 +4682,17 @@ fn render_ephemeral_status(frame: &mut Frame<'_>, app: &App, area: Rect) {
                     Style::default().fg(accent()),
                 ),
             ]))
-            .style(Style::default().bg(BG)),
+            .style(Style::default().bg(Color::Reset)),
             area,
         );
         return;
     }
     // No ephemeral message: leave the row blank but keep the area
     // background consistent so the layout doesn't shift.
-    frame.render_widget(Paragraph::new("").style(Style::default().bg(BG)), area);
+    frame.render_widget(
+        Paragraph::new("").style(Style::default().bg(Color::Reset)),
+        area,
+    );
 }
 
 fn render_hint_bar(frame: &mut Frame<'_>, app: &App, area: Rect) {
@@ -4716,7 +4749,7 @@ fn render_hint_bar(frame: &mut Frame<'_>, app: &App, area: Rect) {
         ));
     }
     frame.render_widget(
-        Paragraph::new(Line::from(spans)).style(Style::default().bg(BG)),
+        Paragraph::new(Line::from(spans)).style(Style::default().bg(Color::Reset)),
         area,
     );
 }
@@ -4853,7 +4886,7 @@ fn render_help(frame: &mut Frame<'_>, area: Rect, app: &App) {
                 ),
             ]),
         ])
-        .style(Style::default().bg(SURFACE)),
+        .style(Style::default().bg(TRANSPARENT)),
         rows[0],
     );
 
@@ -4909,7 +4942,7 @@ fn render_help(frame: &mut Frame<'_>, area: Rect, app: &App) {
     frame.render_widget(
         Paragraph::new(left_lines)
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         body_cols[0],
     );
 
@@ -4933,7 +4966,7 @@ fn render_help(frame: &mut Frame<'_>, area: Rect, app: &App) {
     frame.render_widget(
         Paragraph::new(right_lines)
             .wrap(Wrap { trim: true })
-            .style(Style::default().bg(SURFACE)),
+            .style(Style::default().bg(TRANSPARENT)),
         body_cols[1],
     );
 }
@@ -5005,7 +5038,7 @@ fn media_item_with(
     } else {
         Style::default().fg(TEXT).add_modifier(Modifier::BOLD)
     };
-    let row_style = Style::default().bg(SURFACE);
+    let row_style = Style::default().bg(TRANSPARENT);
     ListItem::new(vec![
         Line::from(vec![
             rail.clone(),
@@ -5047,7 +5080,7 @@ fn panel_block(title: &str) -> Block<'_> {
         .borders(Borders::ALL)
         .border_set(symbols::border::ROUNDED)
         .border_style(Style::default().fg(BORDER_STRONG))
-        .style(Style::default().bg(SURFACE))
+        .style(Style::default().bg(TRANSPARENT))
 }
 
 // `key_style`, `toggle_style`, and `hint_text` were removed: every
@@ -6076,6 +6109,28 @@ mod tests {
         assert!(rendered.contains("Liked Songs"));
         assert!(rendered.contains("Coding"));
         assert!(rendered.contains("generated fallback"));
+    }
+
+    #[test]
+    fn inaccessible_playlist_detail_shows_unavailable_message_not_loading() {
+        let mut app = test_app();
+        app.screen = Screen::Playlists;
+        app.selected_playlist_id = Some("fake:playlist:locked".to_string());
+        app.selected_playlist_name = Some("Locked".to_string());
+        app.playlist_tracks = Vec::new();
+        app.inaccessible_playlist_ids
+            .insert("fake:playlist:locked".to_string());
+
+        let rendered = render_lines(&mut app, 100, 32).join("\n");
+
+        assert!(
+            rendered.contains("Tracks unavailable"),
+            "inaccessible playlist must not render the eternal 'Loading tracks…'; got:\n{rendered}"
+        );
+        assert!(
+            !rendered.contains("Loading tracks"),
+            "inaccessible playlist must not render 'Loading tracks…'; got:\n{rendered}"
+        );
     }
 
     #[test]

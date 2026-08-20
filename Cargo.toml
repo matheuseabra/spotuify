@@ -313,7 +313,7 @@ tempfile = { workspace = true }
 toml = { workspace = true }
 
 [profile.dev]
-debug = 1
+debug = 0
 split-debuginfo = "unpacked"
 
 [profile.test]
