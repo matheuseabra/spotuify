@@ -21,6 +21,9 @@ pub mod tokens {
 
     pub const BG: Color = Color::Rgb(8, 10, 12);
     pub const SURFACE: Color = Color::Rgb(22, 27, 30);
+    /// The terminal's default background — used to make panel backdrops
+    /// transparent so the user's terminal theme / wallpaper shows through.
+    pub const TRANSPARENT: Color = Color::Reset;
     pub const TEXT: Color = Color::Rgb(230, 238, 242);
     pub const TEXT_MUTED: Color = Color::Rgb(130, 140, 145);
     pub const BORDER: Color = Color::Rgb(25, 31, 35);
@@ -50,7 +53,7 @@ pub mod tokens {
 pub use tokens::{
     ACCENT, BG, BORDER, BORDER_STRONG, CHIP_BG, CHIP_FG, DANGER, KIND_ALBUM, KIND_ARTIST,
     KIND_PODCAST, PROGRESS_FILLED, PROGRESS_UNFILLED, SELECTION, SUCCESS, SUCCESS_SOFT, SURFACE,
-    TEXT, TEXT_MUTED, WARN,
+    TEXT, TEXT_MUTED, TRANSPARENT, WARN,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -330,7 +333,7 @@ pub fn card_block(title: &str) -> Block<'static> {
                 .bg(accent())
                 .add_modifier(Modifier::BOLD),
         ))
-        .style(Style::default().bg(SURFACE))
+        .style(Style::default().bg(TRANSPARENT))
 }
 
 /// Focused card: same shape, accent border + accent title chip. Used
@@ -346,7 +349,7 @@ pub fn focused_card_block(title: &str) -> Block<'static> {
                 .bg(accent())
                 .add_modifier(Modifier::BOLD),
         ))
-        .style(Style::default().bg(SURFACE))
+        .style(Style::default().bg(TRANSPARENT))
 }
 
 // ---------------------------------------------------------------------
